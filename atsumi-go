@@ -1,0 +1,50 @@
+#!/bin/bash 
+
+# Make sure only root can run our script
+if [[ $EUID -ne 0 ]]; then
+	echo "This script must be run as root" 1>&2
+	exit 1
+fi
+
+case "$1" in 
+	-i)
+		if [ $# -ne 3 ]; then
+			echo Missing arguments
+			exit 1
+		fi;
+		if [ -f bootstrap.tar.gz ]; then
+			echo Bootstrap project found.
+		else
+			echo Missing compressed bootstrap file.
+			exit
+		fi;
+
+		echo Decompressing project...
+		files=`tar -zxvf bootstrap.tar.gz`
+		echo Decompressed.
+		echo Updating namespaces...
+		for file in $files
+		do
+			if ( grep -q 'boot_' $file ); then
+				`sed -i s/boot_/$2_/g $file`
+				echo -ne .
+			fi;
+			if ( echo $file | grep -qi 'boot_'); then
+				newfile=`echo $file | sed s/boot_/$2_/g`
+				mv $file $newfile
+				echo -ne .
+			fi;
+		done
+		echo .
+		echo Updating index.php for new folder
+		sed -i s/bootstrap/$3/g bootstrap/index.php
+		echo Changing permissions for web access...
+		chgrp -R www-data bootstrap/
+		chmod -R g+r bootstrap/
+		chmod -R g+w bootstrap/log
+		echo Moving project to new location
+		mv bootstrap/ /www/$3
+
+		echo Complete!
+		;;
+esac;
