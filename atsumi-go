@@ -6,22 +6,20 @@ if [[ $EUID -ne 0 ]]; then
 	exit 1
 fi
 
+source CONFIG
+
 case "$1" in 
 	-i)
 		if [ $# -ne 3 ]; then
-			echo Missing arguments
+			echo Usage: atsumi-go -i namespace name
 			exit 1
 		fi;
-		if [ -f bootstrap.tar.gz ]; then
-			echo Bootstrap project found.
-		else
-			echo Missing compressed bootstrap file.
-			exit
-		fi;
-
-		echo Decompressing project...
-		files=`tar -zxvf bootstrap.tar.gz`
-		echo Decompressed.
+		echo Getting latest project...
+		git clone git://github.com/phoenixrises/atsumi-project-base.git bootstrap
+		cd bootstrap
+		files=`git ls-files`
+		# Must be a better way of doing this
+		find -name '.git' -type d -print | xargs rm -rf {}
 		echo Updating namespaces...
 		for file in $files
 		do
@@ -37,13 +35,14 @@ case "$1" in
 		done
 		echo .
 		echo Updating index.php for new folder
-		sed -i s/bootstrap/$3/g bootstrap/index.php
+		sed -i s/bootstrap/$3/g index.php
 		echo Changing permissions for web access...
+		cd ../
 		chgrp -R www-data bootstrap/
 		chmod -R g+r bootstrap/
 		chmod -R g+w bootstrap/log
 		echo Moving project to new location
-		mv bootstrap/ /www/$3
+		mv bootstrap/ $project_dir/$3
 
 		echo Complete!
 		;;
