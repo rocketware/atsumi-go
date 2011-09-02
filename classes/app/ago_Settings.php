@@ -13,8 +13,7 @@ class ago_Settings extends atsumi_AbstractAppSettings {
 	/* the specification is how atsumi knows what URI's call what class & method */
 	public function init_specification () {
 		return array (	
-			''	=> 'boot_FrontPageController',
-			'ajax'	=> 'boot_AjaxController'
+			'install'	=> 'ago_InstallController'
 		);
 	}
 }
