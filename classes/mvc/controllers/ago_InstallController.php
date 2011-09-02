@@ -13,7 +13,16 @@ class ago_InstallController extends mvc_AbstractController {
 		if(preg_match('/^[^A-z0-9]+/', $projectFolder) || preg_match('/^[^A-z0-9]+/', $namespace)) {
 			throw new app_InvalidUsageException();
 		}
-		exit;
+
+		
+	}
+
+	private function goConfigureForCLI() {
+
+	}
+
+	private function goConfigureForDb($dbType) {
+		
 	}
 }
 ?>
