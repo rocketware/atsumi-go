@@ -26,6 +26,11 @@ class ago_InstallController extends mvc_AbstractController {
 			}
 		}
 
+		// Check if the desination already exists
+		if(file_exists($projectFolder)) {
+			throw new Exception('Directory already exists. Please remove the directory or choose a new one to install your site into.');
+		}
+
 		// We should already have atsumi, otherwise we wouldn't be here.
 		// So, get the project base git repo and stick it in the dir we chose
 		$gitOutput = array();
@@ -49,16 +54,23 @@ class ago_InstallController extends mvc_AbstractController {
 			$fileContents = file_get_contents($file);
 			$replacementCount = 0;
 			$fileContents = str_replace('boot', $namespace, $fileContents, $replacementCount);
+			if(strpos($fileContents, 'projectFolder') !== false) {
+				pfl('Updated projectFolder settings');
+				$fileContents = str_replace('projectFolder', substr($projectFolder, strrpos($projectFolder, '/') + 1), $fileContents);
+			}
+
 			file_put_contents($file, $fileContents);
 		       	pfl('Replaced %d items in %s', $replacementCount, $file);
 			pf('Moving file...');
 			rename($file, str_replace('boot', $namespace, $file));
 			pfl('Done.');	
 		}
+
+		pfl('Project Installed.');
 	}
 
 	private function goConfigureForCLI() {
-		echo 'cli';
+		pfl('TODO: CLI configuration');
 	}
 
 	private function goConfigureForDb($dbType) {
