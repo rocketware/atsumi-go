@@ -1,5 +1,7 @@
 <?php
 class ago_InstallController extends mvc_AbstractController {
+	private $projectFolder;
+	private $namespace;
 	function methodlessRequest() {
 		$allArgs = func_get_args();
 
@@ -7,11 +9,56 @@ class ago_InstallController extends mvc_AbstractController {
 			throw new app_InvalidUsageException();
 		}
 		
-		$projectFolder = array_pop($allArgs);
-		$namespace = array_pop($allArgs);
-		if(preg_match('/^[^A-z0-9_\/]+$/', $projectFolder) || preg_match('/^[^A-z0-9]+/', $namespace)) {
+		$this->projectFolder = array_pop($allArgs);
+		$this->namespace = array_pop($allArgs);
+		if(preg_match('/^[^A-z0-9_\/]+$/', $this->projectFolder) || preg_match('/^[^A-z0-9]+/', $this->namespace)) {
 			throw new app_InvalidUsageException();
 		}
+
+		// Check if the desination already exists
+		if(file_exists($this->projectFolder)) {
+			throw new Exception('Directory already exists. Please remove the directory or choose a new one to install your site into.');
+		}
+
+		// We should already have atsumi, otherwise we wouldn't be here.
+		// So, get the project base git repo and stick it in the dir we chose
+		$gitOutput = array();
+		$gitReturn = null;
+		pf("Getting latest version of the Atsumi Base Project...");
+		exec(sprintf('git clone -q git@github.com:phoenixrises/atsumi-project-base.git %s', $this->projectFolder), $gitOutput, $gitReturn);
+
+		if($gitReturn !== 0) {
+			// Git failed
+			throw new Exception("Git failed to pull the project base");
+		}
+		pfl("Done.\n");
+
+		// Scape every file added
+		pf("Finding project files....");
+		$dirListing = $this->scandir_r($this->projectFolder);
+		pfl("found %s files\n", count($dirListing));
+
+		// Current default name space is boot
+		foreach($dirListing as $file) {
+			$fileContents = file_get_contents($file);
+			$replacementCount = 0;
+			$fileContents = str_replace('boot', $this->namespace, $fileContents, $replacementCount);
+			if(strpos($fileContents, 'projectFolder') !== false) {
+				pfl('Updated projectFolder settings');
+				$fileContents = str_replace('projectFolder', substr($this->projectFolder, strrpos($this->projectFolder, '/') + 1), $fileContents);
+			}
+
+			file_put_contents($file, $fileContents);
+		       	pfl('Replaced %d items in %s', $replacementCount, $file);
+			pf('Moving file...');
+			rename($file, str_replace('boot', $this->namespace, $file));
+			pfl('Done.');	
+		}
+
+		pfl('Project Installed.');
+
+		// Customise
+		pfl('Customising Atsumi project install...');
 		while($arg = array_shift($allArgs)) {
 			switch($arg) {
 				case '-c':
@@ -26,51 +73,42 @@ class ago_InstallController extends mvc_AbstractController {
 			}
 		}
 
-		// Check if the desination already exists
-		if(file_exists($projectFolder)) {
-			throw new Exception('Directory already exists. Please remove the directory or choose a new one to install your site into.');
-		}
-
-		// We should already have atsumi, otherwise we wouldn't be here.
-		// So, get the project base git repo and stick it in the dir we chose
-		$gitOutput = array();
-		$gitReturn = null;
-		pf("Getting latest version of the Atsumi Base Project...");
-		exec(sprintf('git clone -q git@github.com:phoenixrises/atsumi-project-base.git %s', $projectFolder), $gitOutput, $gitReturn);
-
-		if($gitReturn !== 0) {
-			// Git failed
-			throw new Exception("Git failed to pull the project base");
-		}
-		pfl("Done.\n");
-
-		// Scape every file added
-		pf("Finding project files....");
-		$dirListing = $this->scandir_r($projectFolder);
-		pfl("found %s files\n", count($dirListing));
-
-		// Current default name space is boot
-		foreach($dirListing as $file) {
-			$fileContents = file_get_contents($file);
-			$replacementCount = 0;
-			$fileContents = str_replace('boot', $namespace, $fileContents, $replacementCount);
-			if(strpos($fileContents, 'projectFolder') !== false) {
-				pfl('Updated projectFolder settings');
-				$fileContents = str_replace('projectFolder', substr($projectFolder, strrpos($projectFolder, '/') + 1), $fileContents);
-			}
-
-			file_put_contents($file, $fileContents);
-		       	pfl('Replaced %d items in %s', $replacementCount, $file);
-			pf('Moving file...');
-			rename($file, str_replace('boot', $namespace, $file));
-			pfl('Done.');	
-		}
-
-		pfl('Project Installed.');
+		pfl('Customisation complete.');
 	}
 
 	private function goConfigureForCLI() {
-		pfl('TODO: CLI configuration');
+		if(!file_exists(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace))) {
+			throw new Exception('Cannot find settings file');
+		}
+		// Create a new settings file
+		$configContent = <<<CONFIG
+<?php
+abstract class {$this->namespace}_GoSettings extends atsumi_AbstractAppSettings {
+	public function __construct() {
+		parent::__construct();
+		\$this->settings['cli'] = true;
+	}
+}
+?>
+CONFIG;
+
+		// Put the config in place
+		$check = file_put_contents(sf('%s/classes/app/%s_GoSettings.php', $this->projectFolder, $this->namespace), $configContent);
+		if(!$check) {
+			throw new Exception('Couldn\'t create new Atsumi-go config file');
+		}
+
+		pf('Updating base settings file...');
+		$settings = file_get_contents(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace));
+		$settings = str_replace('atsumi_AbstractAppSettings', sf('%s_GoSettings', $this->namespace), $settings);
+		$settings = preg_replace('/[,]{0,1}\s+\'cli\'\s+=>\s+false/i', '', $settings);
+		$check = file_put_contents(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace), $settings);
+
+		if(!$check) {
+			throw new Exception('Could not update original config file');
+		}
+
+		pfl('Done.');
 	}
 
 	private function goConfigureForDb($dbType) {
