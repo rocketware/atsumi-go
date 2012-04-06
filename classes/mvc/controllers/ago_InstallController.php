@@ -76,9 +76,9 @@ class ago_InstallController extends mvc_AbstractController {
 		pfl('Customisation complete.');
 	}
 
-	private function goConfigureForCLI() {
-		if(!file_exists(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace))) {
-			throw new Exception('Cannot find settings file');
+	private function createGoConfig() {
+		if(file_exists(sf('%s/classes/app/%s_GoSettings.php', $this->projectFolder, $this->namespace))) {
+			return;
 		}
 		// Create a new settings file
 		$configContent = <<<CONFIG
@@ -86,12 +86,11 @@ class ago_InstallController extends mvc_AbstractController {
 abstract class {$this->namespace}_GoSettings extends atsumi_AbstractAppSettings {
 	public function __construct() {
 		parent::__construct();
-		\$this->settings['cli'] = true;
+		/**SETTINGS**/
 	}
 }
 ?>
 CONFIG;
-
 		// Put the config in place
 		$check = file_put_contents(sf('%s/classes/app/%s_GoSettings.php', $this->projectFolder, $this->namespace), $configContent);
 		if(!$check) {
@@ -101,13 +100,41 @@ CONFIG;
 		pf('Updating base settings file...');
 		$settings = file_get_contents(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace));
 		$settings = str_replace('atsumi_AbstractAppSettings', sf('%s_GoSettings', $this->namespace), $settings);
-		$settings = preg_replace('/[,]{0,1}\s+\'cli\'\s+=>\s+false/i', '', $settings);
 		$check = file_put_contents(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace), $settings);
 
 		if(!$check) {
 			throw new Exception('Could not update original config file');
 		}
 
+	}
+
+	private function goConfigureForCLI() {
+		if(!file_exists(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace))) {
+			throw new Exception('Cannot find settings file');
+		}
+
+		$this->createGoConfig();
+
+		pf('Adding CLI settings...');
+		$goSettings = file_get_contents(sf('%s/classes/app/%s_GoSettings.php', $this->projectFolder, $this->namespace));
+		$matches = array();
+		if(preg_match('/\'cli\'\s+=>\s+(true|false)/i', $goSettings, $matches)) {
+			
+		} else {
+			$goSettings = preg_replace('#([^\S\n]+)(\/\*\*SETTINGS\*\*\/)#i', '${1}${2}'."\r\n".'${1}$settings[\'cli\'] = true;', $goSettings);
+		}
+		$check = file_put_contents(sf('%s/classes/app/%s_GoSettings.php', $this->projectFolder, $this->namespace), $goSettings);
+		if(!$check) {
+			throw new Exception('Could not write to GoSettings file');
+		}
+
+		pf('Updating base settings file...');
+		$settings = file_get_contents(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace));
+		$settings = preg_replace('/[,]{0,1}\s+\'cli\'\s+=>\s+(true|false)/i', '', $settings);
+		$check = file_put_contents(sf('%s/classes/app/%s_Settings.php', $this->projectFolder, $this->namespace), $settings);
+		if(!$check) {
+			throw new Exception('Could not write to Settings file');
+		}
 		pfl('Done.');
 	}
 
@@ -115,7 +142,14 @@ CONFIG;
 		if(!in_array($dbType, array('postgresql', 'mysql'))) {
 			throw new Exception('Unknown database type');
 		}
-		echo $dbType;
+
+		$settings = array(
+			'dbHost'	=> '127.0.0.1',
+			'dbUser'	=> 'user',
+			'dbPassword'	=> 'password',
+			'dbName'	=> 'changeme'
+		);
+
 	}
 
 	private function scandir_r($folder) {

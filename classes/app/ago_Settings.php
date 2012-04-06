@@ -2,6 +2,7 @@
 class ago_Settings extends atsumi_AbstractAppSettings {
 	/* we can setup base settings here, can be useful for version numbers etc */
 	protected $settings = 	array (
+					'baseDir'	=> '/www/atsumi-go/',
 					'debug'		=> true,
 					'cli'		=> true
 				);
@@ -15,7 +16,8 @@ class ago_Settings extends atsumi_AbstractAppSettings {
 	/* the specification is how atsumi knows what URI's call what class & method */
 	public function init_specification () {
 		return array (	
-			'install'	=> 'ago_InstallController'
+			'install'	=> 'ago_InstallController',
+			'model'		=> 'ago_ModelController'
 		);
 	}
 }
