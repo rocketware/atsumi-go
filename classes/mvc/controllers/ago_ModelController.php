@@ -115,7 +115,7 @@ class ago_ModelController extends mvc_AbstractController {
 			$data['properties'] = implode("\t", $properties);
 			// Define the WHERE clause for the write function
 			if(!count($constraints)) {
-				pfl("\t\t-Can\'t find key in table %s. Write condition will need set manually", $table);
+				pfl("\t\t-Can't find key in table %s. Write condition will need set manually", $table);
 				$data['condition'] = '';
 			} else {
 				$conditionArray = array();
