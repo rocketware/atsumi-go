@@ -57,6 +57,12 @@ class ago_ModelController extends mvc_AbstractController {
 		}
 
 		$projectSettings = new $matches[1];
+		
+		// Check if a database method exists
+		if(!method_exists($projectSettings, 'init_db')) {
+			pfl('Missing init_db function in settings');
+			throw new app_InvalidUsageException();
+		}
 
 		$db = $projectSettings->init_db;
 		if($this->allTables) {
@@ -72,7 +78,7 @@ class ago_ModelController extends mvc_AbstractController {
 
 			// Check if the file already exists
 			$baseFile = sf('%s/classes/mvc/models/%sBaseModel.php', $this->projectDir, (($this->namespace == '') ? '' : $this->namespace));
-			$modelFile = sf('%s/classes/mvc/models/%s%sTestModel.php', $this->projectDir, (($this->namespace == '') ? '' : $this->namespace), str_replace(' ', '', ucwords(str_replace('_', ' ', $table))));
+			$modelFile = sf('%s/classes/mvc/models/%s%sModel.php', $this->projectDir, (($this->namespace == '') ? '' : $this->namespace), str_replace(' ', '', ucwords(str_replace('_', ' ', $table))));
 ;
 
 			$className = str_replace(' ', '', ucwords(str_replace('_', ' ', $table)));
