@@ -42,7 +42,7 @@ class ago_InstallController extends mvc_AbstractController {
 		foreach($dirListing as $file) {
 			$fileContents = file_get_contents($file);
 			$replacementCount = 0;
-			$fileContents = str_replace('boot', $this->namespace, $fileContents, $replacementCount);
+			$fileContents = str_replace('boot_', $this->namespace . '_', $fileContents, $replacementCount);
 			if(strpos($fileContents, 'projectFolder') !== false) {
 				pfl('Updated projectFolder settings');
 				$fileContents = str_replace('projectFolder', substr($this->projectFolder, strrpos($this->projectFolder, '/') + 1), $fileContents);
@@ -51,7 +51,7 @@ class ago_InstallController extends mvc_AbstractController {
 			file_put_contents($file, $fileContents);
 		       	pfl('Replaced %d items in %s', $replacementCount, $file);
 			pf('Moving file...');
-			rename($file, str_replace('boot', $this->namespace, $file));
+			rename($file, str_replace('boot_', $this->namespace . '_', $file));
 			pfl('Done.');	
 		}
 

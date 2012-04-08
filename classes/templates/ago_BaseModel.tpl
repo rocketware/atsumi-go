@@ -1,6 +1,4 @@
-/**************************************************/
-/*		    START AUTO			  */
-/**************************************************/
+/* START AUTO */
 class {namespace}BaseModel {
 
 	public function __call($name, $args) {
@@ -29,10 +27,7 @@ class {namespace}BaseModel {
 	}
 
 	abstract public static function write($db, $object);
-	abstract private static function loadFromSqlRow($row)i;
+	abstract private static function loadFromSqlRow($row);
 	
 
-/**************************************************/
-/*		     END AUTO			  */
-/**************************************************/
-
+/* FINISH AUTO */
